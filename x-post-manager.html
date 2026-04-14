@@ -128,7 +128,7 @@
   <div style="font-size:22px">𝕏</div>
   <div>
     <div class="header-title">X Post Manager</div>
-    <div class="header-sub">AI投稿生成 + スケジュール管理（Gemini無料枠対応）</div>
+    <div class="header-sub">AI投稿生成 + スケジュール管理（Groq / Gemini / Claude 対応）</div>
   </div>
 </div>
 
@@ -231,19 +231,24 @@
   <!-- SETTINGS -->
   <div id="tab-settings" style="display:none">
     <div class="card" style="border-color:rgba(232,146,10,0.3)">
-      <div class="section-title">Anthropic APIキー</div>
+      <div class="section-title">AI エンジン設定</div>
       <div class="field">
-        <label>APIキー（sk-ant-で始まる文字列）</label>
+        <label>使用するAI</label>
+        <select id="s-ai-provider" onchange="onProviderChange()">
+          <option value="groq">⚡ Groq（無料・高速・1日14,400回）</option>
+          <option value="gemini">🔵 Gemini（無料・1日1,500回）</option>
+          <option value="anthropic">🟠 Claude / Anthropic（有料・高品質）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="apikey-label">APIキー</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="password" id="s-apikey" placeholder="AIzaSy..." style="flex:1">
+          <input type="password" id="s-apikey" placeholder="gsk_..." style="flex:1">
           <button class="btn btn-ghost btn-sm" onclick="toggleApiKeyVisibility()" style="flex-shrink:0">👁</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.7">
-        🔒 キーはこの端末のlocalStorageにのみ保存されます。<br>
-        取得先: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a> → Get API key（無料）
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="saveApiKey()">💾 APIキーを保存</button>
+      <div id="apikey-hint" style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.8"></div>
+      <button class="btn btn-primary btn-sm" onclick="saveApiKey()">💾 保存</button>
     </div>
     <div class="card">
       <div class="section-title">商品・サービス情報</div>
@@ -455,16 +460,44 @@ function buildSystemPrompt(){
 }
 async function callClaude(msg){
   const apiKey=localStorage.getItem('xpm_apikey')||'';
+  const provider=localStorage.getItem('xpm_provider')||'groq';
   if(!apiKey){throw new Error('APIキーが設定されていません。⚙️設定タブで入力してください。');}
-  const prompt=buildSystemPrompt()+'\n\n'+msg;
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1000,temperature:0.9}})
-  });
-  const data=await res.json();
-  if(data.error)throw new Error(data.error.message);
-  return data.candidates[0].content.parts[0].text.trim();
+
+  if(provider==='groq'){
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:buildSystemPrompt()},{role:'user',content:msg}],max_tokens:1000,temperature:0.9})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    return data.choices[0].message.content.trim();
+  }
+
+  if(provider==='gemini'){
+    const prompt=buildSystemPrompt()+'\n\n'+msg;
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1000,temperature:0.9}})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    return data.candidates[0].content.parts[0].text.trim();
+  }
+
+  if(provider==='anthropic'){
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:[{role:'user',content:msg}]})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    return data.content[0].text.trim();
+  }
+
+  throw new Error('不明なプロバイダーです');
 }
 function showGenerating(){document.getElementById('generated-result').style.display='none';document.getElementById('generating-indicator').style.display='';}
 function showResult(text){
@@ -514,11 +547,38 @@ function refreshRewriteSelect(){
 }
 
 // SETTINGS
-function loadSettingsForm(){const s=state.settings;['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=s[k]||'';});const ak=document.getElementById('s-apikey');if(ak)ak.value=localStorage.getItem('xpm_apikey')||'';}
+function loadSettingsForm(){
+  const s=state.settings;
+  ['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=s[k]||'';});
+  const p=localStorage.getItem('xpm_provider')||'groq';
+  const sel=document.getElementById('s-ai-provider');
+  if(sel){sel.value=p;onProviderChange();}
+  const ak=document.getElementById('s-apikey');
+  if(ak)ak.value=localStorage.getItem('xpm_apikey')||'';
+}
 function saveSettings(){['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)state.settings[k]=el.value.trim();});save();toast('設定を保存しました','success');}
 
 // UTILS
-function saveApiKey(){const v=document.getElementById('s-apikey').value.trim();if(!v){toast('APIキーを入力してください');return;}if(v.length < 20){toast('APIキーの形式が正しくありません');return;}localStorage.setItem('xpm_apikey',v);toast('APIキーを保存しました','success');}
+function providerHints(){return {
+  groq:{placeholder:'gsk_...',hint:'📋 取得先（無料・クレカ不要）: <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com/keys</a><br>⚡ 1日14,400回まで無料'},
+  gemini:{placeholder:'AIzaSy...',hint:'📋 取得先（無料・クレカ不要）: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a><br>🔵 1日1,500回まで無料'},
+  anthropic:{placeholder:'sk-ant-...',hint:'📋 取得先: <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a><br>🟠 従量課金（投稿1本約1〜2円）'}
+};}
+function onProviderChange(){
+  const p=document.getElementById('s-ai-provider').value;
+  const h=providerHints()[p];
+  document.getElementById('s-apikey').placeholder=h.placeholder;
+  document.getElementById('apikey-hint').innerHTML=h.hint;
+  document.getElementById('s-apikey').value='';
+}
+function saveApiKey(){
+  const v=document.getElementById('s-apikey').value.trim();
+  const p=document.getElementById('s-ai-provider').value;
+  if(!v){toast('APIキーを入力してください');return;}
+  localStorage.setItem('xpm_apikey',v);
+  localStorage.setItem('xpm_provider',p);
+  toast('保存しました（'+p+'）','success');
+}
 function toggleApiKeyVisibility(){const el=document.getElementById('s-apikey');el.type=el.type==='password'?'text':'password';}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function updateCharCount(el,id){const len=[...el.value].length;const e=document.getElementById(id);e.textContent=`${len} / 280`;e.className='char-count'+(len>280?' over':'');}
