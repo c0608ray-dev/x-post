@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X投稿マネージャー</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0e0e10; --surface: #18181c; --surface2: #222228; --border: #2e2e36;
+    --accent: #e8920a; --text: #e8e8f0; --text2: #8888a0;
+    --green: #4ade80; --red: #f87171; --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  .header-title { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent); }
+  .header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 12px; overflow-x: auto; }
+  .tab { padding: 12px 14px; font-size: 13px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  .main { padding: 16px; max-width: 680px; margin: 0 auto; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .section-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text2); margin-bottom: 12px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+  .field input, .field textarea, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; font-family: 'Noto Sans JP', sans-serif; outline: none; transition: border-color 0.15s; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+  .field textarea { min-height: 80px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #f5a332; }
+  .btn-primary:disabled { background: #444; color: #666; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text2); }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid transparent; padding: 6px 10px; font-size: 12px; }
+  .btn-danger:hover { background: rgba(248,113,113,0.1); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  .stats-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; flex: 1; text-align: center; }
+  .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+  /* POST CARD */
+  .post-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; transition: border-color 0.15s; }
+  .post-card.posted { border-color: rgba(74,222,128,0.3); }
+  .post-card.scheduled { border-color: rgba(96,165,250,0.3); }
+  .post-card-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .post-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); background: rgba(232,146,10,0.12); padding: 3px 8px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+  .post-theme { font-size: 12px; color: var(--text2); flex: 1; }
+  .post-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .badge-posted { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge-pending { background: rgba(136,136,160,0.15); color: var(--text2); }
+  .badge-scheduled { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .post-text { font-size: 13px; line-height: 1.7; white-space: pre-wrap; background: var(--surface2); padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+  .post-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .date-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; color: var(--text); font-size: 12px; outline: none; }
+  .date-input:focus { border-color: var(--accent); }
+
+  /* CALENDAR */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 16px; }
+  .cal-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-month { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-dow { text-align: center; font-size: 11px; color: var(--text2); padding: 6px 0; font-weight: 700; }
+  .cal-dow:first-child { color: var(--red); }
+  .cal-dow:last-child { color: var(--blue); }
+
+  .cal-cell { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; min-height: 68px; padding: 6px; cursor: pointer; transition: border-color 0.15s; }
+  .cal-cell:hover { border-color: var(--accent); }
+  .cal-cell.today { border-color: rgba(232,146,10,0.6); }
+  .cal-cell.selected { border-color: var(--accent); background: rgba(232,146,10,0.07); }
+  .cal-cell.other-month { opacity: 0.3; pointer-events: none; }
+  .cal-cell.sun .cal-day { color: var(--red); }
+  .cal-cell.sat .cal-day { color: var(--blue); }
+  .cal-day { font-size: 12px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+  .today-dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+
+  .cal-chip { font-size: 10px; border-radius: 3px; padding: 2px 5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .cal-chip.posted { background: rgba(74,222,128,0.2); color: var(--green); }
+  .cal-chip.pending { background: rgba(232,146,10,0.15); color: var(--accent); }
+  .cal-chip.more { background: rgba(136,136,160,0.15); color: var(--text2); text-align: center; }
+
+  /* DAY DETAIL */
+  .day-detail { background: var(--surface); border: 1px solid rgba(232,146,10,0.3); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .day-detail-date { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
+
+  /* AI PANEL */
+  .ai-panel { background: linear-gradient(135deg,rgba(232,146,10,0.06),rgba(255,107,53,0.04)); border: 1px solid rgba(232,146,10,0.2); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .ai-panel-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
+  .generated-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 12px; }
+  .generated-text { font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text); margin-bottom: 12px; }
+  .loading-dots::after { content: ''; animation: dots 1.2s steps(4,end) infinite; }
+  @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+
+  .char-count { font-size: 11px; color: var(--text2); text-align: right; margin-top: 4px; }
+  .char-count.over { color: var(--red); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--text2); font-size: 14px; }
+  .empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px 16px 0 0; width: 100%; max-width: 480px; padding: 20px; }
+  .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--accent); display: flex; justify-content: space-between; }
+  .modal-close { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; line-height: 1; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 20px; font-size: 13px; z-index: 999; transition: transform 0.25s ease; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(74,222,128,0.4); color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size:22px">𝕏</div>
+  <div>
+    <div class="header-title">X Post Manager</div>
+    <div class="header-sub">AI投稿生成 + スケジュール管理（Gemini無料枠対応）</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="calendar" onclick="switchTab('calendar')">📅 カレンダー</div>
+  <div class="tab" data-tab="posts" onclick="switchTab('posts')">📋 投稿一覧</div>
+  <div class="tab" data-tab="generate" onclick="switchTab('generate')">✨ AI生成</div>
+  <div class="tab" data-tab="settings" onclick="switchTab('settings')">⚙️ 設定</div>
+</div>
+
+<div class="main">
+
+  <!-- CALENDAR -->
+  <div id="tab-calendar">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-month" id="cal-month-label"></div>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="card" style="padding:10px">
+      <div class="cal-grid">
+        <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
+        <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow">土</div>
+      </div>
+      <div class="cal-grid" id="cal-grid" style="margin-top:4px"></div>
+    </div>
+    <div id="day-detail" style="display:none">
+      <div class="day-detail">
+        <div class="day-detail-date" id="day-detail-date"></div>
+        <div id="day-detail-posts"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="openAssignModal()">＋ この日にネタを追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POSTS -->
+  <div id="tab-posts" style="display:none">
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">総ネタ数</div></div>
+      <div class="stat"><div class="stat-num" id="stat-scheduled" style="color:var(--blue)">0</div><div class="stat-label">日程あり</div></div>
+      <div class="stat"><div class="stat-num" id="stat-posted" style="color:var(--green)">0</div><div class="stat-label">投稿済み</div></div>
+    </div>
+    <div id="posts-list"></div>
+    <div class="card">
+      <div class="section-title">手動追加</div>
+      <div class="field"><label>テーマ</label><input type="text" id="manual-theme" placeholder="例：請求書機能の紹介"></div>
+      <div class="field">
+        <label>投稿文</label>
+        <textarea id="manual-text" rows="4" placeholder="投稿文を入力..." oninput="updateCharCount(this,'manual-count')"></textarea>
+        <div class="char-count" id="manual-count">0 / 280</div>
+      </div>
+      <div class="field"><label>投稿予定日（任意）</label><input type="date" id="manual-date"></div>
+      <button class="btn btn-primary" onclick="addManualPost()">＋ 追加</button>
+    </div>
+  </div>
+
+  <!-- GENERATE -->
+  <div id="tab-generate" style="display:none">
+    <div class="ai-panel">
+      <div class="ai-panel-title">🤖 ゼロから新規生成</div>
+      <div class="field"><label>テーマ・角度</label><input type="text" id="gen-theme" placeholder="例：買い切りで月額不要なことを強調"></div>
+      <div class="field"><label>トーン</label>
+        <select id="gen-tone">
+          <option value="共感">共感・あるある系</option>
+          <option value="実体験">実体験・リアル系</option>
+          <option value="機能紹介">機能紹介・説明系</option>
+          <option value="問いかけ">問いかけ・質問系</option>
+          <option value="比較">比較・対比系</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-gen-new" onclick="generateNew()">✨ 生成する</button>
+    </div>
+
+    <div class="ai-panel">
+      <div class="ai-panel-title">🔄 既存ネタをリライト</div>
+      <div class="field"><label>元にする投稿</label><select id="rewrite-select"><option value="">-- 選択 --</option></select></div>
+      <div class="field"><label>変え方の指示（省略可）</label><input type="text" id="rewrite-instruction" placeholder="例：もっとカジュアルに、絵文字多め"></div>
+      <button class="btn btn-primary btn-full" id="btn-rewrite" onclick="rewritePost()">🔄 リライトする</button>
+    </div>
+
+    <div id="generated-result" style="display:none">
+      <div class="section-title" style="margin-top:4px">生成結果</div>
+      <div class="generated-box">
+        <div class="generated-text" id="generated-text"></div>
+        <div class="char-count" id="generated-count"></div>
+        <hr class="divider">
+        <div class="field"><label>投稿予定日を設定（任意）</label><input type="date" id="gen-save-date"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveGenerated()">＋ リストに保存</button>
+          <button class="btn btn-ghost btn-sm" onclick="copyGenerated()">📋 コピー</button>
+          <button class="btn btn-ghost btn-sm" onclick="regenerate()">↩ 再生成</button>
+        </div>
+      </div>
+    </div>
+    <div id="generating-indicator" style="display:none" class="generated-box">
+      <div style="color:var(--text2);font-size:13px" class="loading-dots">生成中</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" style="display:none">
+    <div class="card" style="border-color:rgba(232,146,10,0.3)">
+      <div class="section-title">Anthropic APIキー</div>
+      <div class="field">
+        <label>APIキー（sk-ant-で始まる文字列）</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="s-apikey" placeholder="AIzaSy..." style="flex:1">
+          <button class="btn btn-ghost btn-sm" onclick="toggleApiKeyVisibility()" style="flex-shrink:0">👁</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+        🔒 キーはこの端末のlocalStorageにのみ保存されます。<br>
+        取得先: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a> → Get API key（無料）
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveApiKey()">💾 APIキーを保存</button>
+    </div>
+    <div class="card">
+      <div class="section-title">商品・サービス情報</div>
+      <div class="field"><label>商品名 *</label><input type="text" id="s-name" placeholder="例：haisonikko"></div>
+      <div class="field"><label>ターゲット *</label><input type="text" id="s-target" placeholder="例：軽貨物ドライバー・個人事業主"></div>
+      <div class="field"><label>特徴・ウリ（改行区切り）*</label><textarea id="s-features" rows="5" placeholder="インストール不要&#10;買い切り¥3,980"></textarea></div>
+      <div class="field"><label>販売URL</label><input type="text" id="s-url" placeholder="例：haisonikko.booth.pm/items/8186303"></div>
+      <div class="field"><label>ハッシュタグ（スペース区切り）</label><input type="text" id="s-hashtags" placeholder="例：#軽貨物 #個人事業主"></div>
+      <div class="field"><label>AIへの補足</label><textarea id="s-extra" rows="3" placeholder="例：自分が実際に使っているツール。note無料版あり。"></textarea></div>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 保存</button>
+    </div>
+    <div class="card" style="border-color:rgba(248,113,113,0.2)">
+      <div class="section-title" style="color:var(--red)">データ管理</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="exportData()">📤 エクスポート</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">📥 インポート</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+        <button class="btn btn-danger btn-sm" onclick="clearPosts()">🗑 リセット</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ASSIGN MODAL -->
+<div class="modal-overlay" id="assign-modal" style="display:none" onclick="if(event.target===this)closeAssignModal()">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="assign-modal-title">この日にネタを追加</span>
+      <button class="modal-close" onclick="closeAssignModal()">×</button>
+    </div>
+    <div class="field"><label>投稿ネタを選択</label><select id="assign-select" style="width:100%"></select></div>
+    <button class="btn btn-primary btn-full" onclick="assignPost()">📅 スケジュール登録</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let state = { settings:{name:'',target:'',features:'',url:'',hashtags:'',extra:''}, posts:[] };
+let calYear, calMonth, selectedDate=null, lastGenType=null, lastGenParams=null;
+
+function load(){try{const d=localStorage.getItem('xpm_v2');if(d)state=JSON.parse(d);}catch(e){}}
+function save(){try{localStorage.setItem('xpm_v2',JSON.stringify(state));}catch(e){}}
+
+function switchTab(tab){
+  ['calendar','posts','generate','settings'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+    document.querySelector(`[data-tab="${t}"]`).classList.toggle('active',t===tab);
+  });
+  if(tab==='calendar')renderCalendar();
+  if(tab==='posts')renderPosts();
+  if(tab==='generate')refreshRewriteSelect();
+  if(tab==='settings')loadSettingsForm();
+}
+
+// CALENDAR
+function changeMonth(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+
+function toDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function renderCalendar(){
+  document.getElementById('cal-month-label').textContent=`${calYear}年${calMonth+1}月`;
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML='';
+  const first=new Date(calYear,calMonth,1);
+  const startDay=first.getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const daysInPrev=new Date(calYear,calMonth,0).getDate();
+  const todayStr=toDateStr(new Date());
+  const postsByDate={};
+  state.posts.forEach(p=>{if(p.scheduledDate){if(!postsByDate[p.scheduledDate])postsByDate[p.scheduledDate]=[];postsByDate[p.scheduledDate].push(p);}});
+  const total=Math.ceil((startDay+daysInMonth)/7)*7;
+  for(let i=0;i<total;i++){
+    const cell=document.createElement('div');
+    cell.className='cal-cell';
+    let date,isOther=false;
+    if(i<startDay){date=new Date(calYear,calMonth-1,daysInPrev-startDay+i+1);isOther=true;}
+    else if(i>=startDay+daysInMonth){date=new Date(calYear,calMonth+1,i-startDay-daysInMonth+1);isOther=true;}
+    else{date=new Date(calYear,calMonth,i-startDay+1);}
+    const dow=date.getDay();
+    const ds=toDateStr(date);
+    if(isOther)cell.classList.add('other-month');
+    if(dow===0)cell.classList.add('sun');
+    if(dow===6)cell.classList.add('sat');
+    if(ds===todayStr)cell.classList.add('today');
+    if(ds===selectedDate)cell.classList.add('selected');
+    const dayEl=document.createElement('div');
+    dayEl.className='cal-day';
+    dayEl.innerHTML=`<span>${date.getDate()}</span>${ds===todayStr?'<span class="today-dot"></span>':''}`;
+    cell.appendChild(dayEl);
+    const posts=postsByDate[ds]||[];
+    posts.slice(0,2).forEach(p=>{const chip=document.createElement('div');chip.className='cal-chip '+(p.posted?'posted':'pending');chip.textContent=p.theme||p.text.slice(0,12);cell.appendChild(chip);});
+    if(posts.length>2){const more=document.createElement('div');more.className='cal-chip more';more.textContent=`+${posts.length-2}件`;cell.appendChild(more);}
+    if(!isOther)cell.onclick=()=>selectDay(ds,date);
+    grid.appendChild(cell);
+  }
+}
+
+function selectDay(ds,date){
+  selectedDate=ds;
+  renderCalendar();
+  const detail=document.getElementById('day-detail');
+  document.getElementById('day-detail-date').textContent=`📅 ${date.getFullYear()}年${date.getMonth()+1}月${date.getDate()}日`;
+  detail.style.display='';
+  const posts=state.posts.filter(p=>p.scheduledDate===ds);
+  const container=document.getElementById('day-detail-posts');
+  if(!posts.length){container.innerHTML='<div style="color:var(--text2);font-size:13px;margin-bottom:10px;">この日のネタはありません</div>';return;}
+  container.innerHTML=posts.map(p=>`
+    <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text2)">${esc(p.theme)}</span>
+        <span class="post-badge ${p.posted?'badge-posted':'badge-pending'}">${p.posted?'✅ 投稿済':'⏳ 未投稿'}</span>
+      </div>
+      <div style="font-size:12px;line-height:1.65;white-space:pre-wrap;margin-bottom:8px">${esc(p.text)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="togglePosted('${p.id}');selectDay('${ds}',new Date('${ds}T12:00:00'))">${p.posted?'↩ 未投稿に戻す':'✅ 投稿済みに'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyPost('${p.id}')">📋 コピー</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeSchedule('${p.id}','${ds}')">📅 日程解除</button>
+      </div>
+    </div>
+  `).join('');
+  detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function removeSchedule(id,ds){
+  const p=state.posts.find(p=>p.id===id);
+  if(p){p.scheduledDate=null;save();renderCalendar();selectDay(ds,new Date(ds+'T12:00:00'));}
+}
+
+function openAssignModal(){
+  const unscheduled=state.posts.filter(p=>!p.scheduledDate);
+  if(!unscheduled.length){toast('日程未設定のネタがありません');return;}
+  const sel=document.getElementById('assign-select');
+  sel.innerHTML=unscheduled.map(p=>`<option value="${p.id}">${esc(p.theme)} — ${esc(p.text.slice(0,25))}…</option>`).join('');
+  document.getElementById('assign-modal-title').textContent=`📅 ${selectedDate} に追加`;
+  document.getElementById('assign-modal').style.display='flex';
+}
+
+function closeAssignModal(){document.getElementById('assign-modal').style.display='none';}
+
+function assignPost(){
+  const id=document.getElementById('assign-select').value;
+  const p=state.posts.find(p=>p.id===id);
+  if(p&&selectedDate){p.scheduledDate=selectedDate;save();renderCalendar();closeAssignModal();selectDay(selectedDate,new Date(selectedDate+'T12:00:00'));toast('登録しました','success');}
+}
+
+// POSTS
+function renderPosts(){
+  const total=state.posts.length;
+  const scheduled=state.posts.filter(p=>p.scheduledDate).length;
+  const posted=state.posts.filter(p=>p.posted).length;
+  document.getElementById('stat-total').textContent=total;
+  document.getElementById('stat-scheduled').textContent=scheduled;
+  document.getElementById('stat-posted').textContent=posted;
+  const list=document.getElementById('posts-list');
+  if(!total){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div>まだ投稿ネタがありません<br><small style="margin-top:6px;display:block">AI生成タブで作るか下から追加してください</small></div>';return;}
+  const sorted=[...state.posts].sort((a,b)=>{
+    if(a.scheduledDate&&b.scheduledDate)return a.scheduledDate.localeCompare(b.scheduledDate);
+    if(a.scheduledDate)return -1;if(b.scheduledDate)return 1;return 0;
+  });
+  list.innerHTML=sorted.map((p,i)=>`
+    <div class="post-card ${p.posted?'posted':p.scheduledDate?'scheduled':''}">
+      <div class="post-card-header">
+        <div class="post-num">#${String(i+1).padStart(2,'0')}</div>
+        <div class="post-theme">${esc(p.theme)}</div>
+        <div class="post-badge ${p.posted?'badge-posted':p.scheduledDate?'badge-scheduled':'badge-pending'}">${p.posted?'✅ 済':p.scheduledDate?'📅 予定':'⏳ 未定'}</div>
+      </div>
+      <div class="post-text">${esc(p.text)}</div>
+      <div class="post-actions">
+        <input type="date" class="date-input" value="${p.scheduledDate||''}" onchange="setDate('${p.id}',this.value)" title="投稿日を設定">
+        <button class="btn btn-ghost btn-sm" onclick="togglePosted('${p.id}')">${p.posted?'↩ 戻す':'✅ 投稿済み'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyPost('${p.id}')">📋</button>
+        <button class="btn btn-danger" onclick="deletePost('${p.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setDate(id,val){const p=state.posts.find(p=>p.id===id);if(p){p.scheduledDate=val||null;save();renderPosts();}}
+function togglePosted(id){const p=state.posts.find(p=>p.id===id);if(p){p.posted=!p.posted;save();renderPosts();}}
+function deletePost(id){if(!confirm('削除しますか？'))return;state.posts=state.posts.filter(p=>p.id!==id);save();renderPosts();refreshRewriteSelect();}
+function copyPost(id){const p=state.posts.find(p=>p.id===id);if(p)navigator.clipboard.writeText(p.text).then(()=>toast('コピーしました','success'));}
+function addManualPost(){
+  const theme=document.getElementById('manual-theme').value.trim();
+  const text=document.getElementById('manual-text').value.trim();
+  const date=document.getElementById('manual-date').value;
+  if(!text){toast('投稿文を入力してください');return;}
+  addPost(theme||'手動追加',text,date||null);
+  document.getElementById('manual-theme').value='';document.getElementById('manual-text').value='';document.getElementById('manual-date').value='';
+  document.getElementById('manual-count').textContent='0 / 280';toast('追加しました','success');
+}
+function addPost(theme,text,scheduledDate){
+  state.posts.unshift({id:Date.now().toString(),theme,text,posted:false,scheduledDate:scheduledDate||null,createdAt:new Date().toLocaleDateString('ja-JP')});
+  save();renderPosts();refreshRewriteSelect();
+}
+
+// AI
+function buildSystemPrompt(){
+  const s=state.settings;
+  return `あなたはSNSマーケティングの専門家です。以下の商品・サービスのX（旧Twitter）投稿文を作成します。
+【商品名】${s.name||'（未設定）'}
+【ターゲット】${s.target||'（未設定）'}
+【特徴・ウリ】\n${s.features||'（未設定）'}
+【販売URL】${s.url||''}
+【ハッシュタグ】${s.hashtags||''}
+【補足】${s.extra||''}
+投稿文のルール：日本語・口語体・140〜200文字・宣伝くさくしない・URLとハッシュタグを末尾に・投稿文のみを返す`;
+}
+async function callClaude(msg){
+  const apiKey=localStorage.getItem('xpm_apikey')||'';
+  if(!apiKey){throw new Error('APIキーが設定されていません。⚙️設定タブで入力してください。');}
+  const prompt=buildSystemPrompt()+'\n\n'+msg;
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1000,temperature:0.9}})
+  });
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message);
+  return data.candidates[0].content.parts[0].text.trim();
+}
+function showGenerating(){document.getElementById('generated-result').style.display='none';document.getElementById('generating-indicator').style.display='';}
+function showResult(text){
+  document.getElementById('generating-indicator').style.display='none';document.getElementById('generated-result').style.display='';
+  document.getElementById('generated-text').textContent=text;
+  const len=[...text].length;const el=document.getElementById('generated-count');
+  el.textContent=`${len} 文字`;el.className='char-count'+(len>280?' over':'');
+}
+async function generateNew(){
+  const theme=document.getElementById('gen-theme').value.trim();const tone=document.getElementById('gen-tone').value;
+  if(!theme){toast('テーマを入力してください');return;}if(!state.settings.name){toast('先に商品設定を入力してください');return;}
+  lastGenType='new';lastGenParams={theme,tone};
+  document.getElementById('btn-gen-new').disabled=true;showGenerating();
+  try{showResult(await callClaude(`テーマ「${theme}」、トーン「${tone}」で投稿文を1つ生成してください。`));}
+  catch(e){document.getElementById('generating-indicator').style.display='none';toast('エラー: '+e.message);}
+  finally{document.getElementById('btn-gen-new').disabled=false;}
+}
+async function rewritePost(){
+  const id=document.getElementById('rewrite-select').value;if(!id){toast('投稿を選択してください');return;}
+  if(!state.settings.name){toast('先に商品設定を入力してください');return;}
+  const p=state.posts.find(p=>p.id===id);const instruction=document.getElementById('rewrite-instruction').value.trim();
+  lastGenType='rewrite';lastGenParams={postId:id,instruction};
+  document.getElementById('btn-rewrite').disabled=true;showGenerating();
+  try{showResult(await callClaude(`以下の投稿文を${instruction?`「${instruction}」の指示で`:''}リライトしてください。\n\n${p.text}`));}
+  catch(e){document.getElementById('generating-indicator').style.display='none';toast('エラー: '+e.message);}
+  finally{document.getElementById('btn-rewrite').disabled=false;}
+}
+async function regenerate(){
+  if(!lastGenType)return;
+  if(lastGenType==='new'){document.getElementById('gen-theme').value=lastGenParams.theme;document.getElementById('gen-tone').value=lastGenParams.tone;await generateNew();}
+  else{document.getElementById('rewrite-select').value=lastGenParams.postId;document.getElementById('rewrite-instruction').value=lastGenParams.instruction||'';await rewritePost();}
+}
+function saveGenerated(){
+  const text=document.getElementById('generated-text').textContent;if(!text)return;
+  const date=document.getElementById('gen-save-date').value;
+  const theme=lastGenType==='new'?(lastGenParams?.theme||'AI生成'):'リライト';
+  addPost(theme,text,date||null);
+  document.getElementById('generated-result').style.display='none';document.getElementById('gen-save-date').value='';
+  toast('保存しました','success');
+}
+function copyGenerated(){navigator.clipboard.writeText(document.getElementById('generated-text').textContent).then(()=>toast('コピーしました','success'));}
+function refreshRewriteSelect(){
+  const sel=document.getElementById('rewrite-select');const cur=sel.value;
+  sel.innerHTML='<option value="">-- 選択 --</option>';
+  state.posts.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.theme+' — '+p.text.slice(0,25)+'…';sel.appendChild(o);});
+  if(cur)sel.value=cur;
+}
+
+// SETTINGS
+function loadSettingsForm(){const s=state.settings;['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=s[k]||'';});const ak=document.getElementById('s-apikey');if(ak)ak.value=localStorage.getItem('xpm_apikey')||'';}
+function saveSettings(){['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)state.settings[k]=el.value.trim();});save();toast('設定を保存しました','success');}
+
+// UTILS
+function saveApiKey(){const v=document.getElementById('s-apikey').value.trim();if(!v){toast('APIキーを入力してください');return;}if(v.length < 20){toast('APIキーの形式が正しくありません');return;}localStorage.setItem('xpm_apikey',v);toast('APIキーを保存しました','success');}
+function toggleApiKeyVisibility(){const el=document.getElementById('s-apikey');el.type=el.type==='password'?'text':'password';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function updateCharCount(el,id){const len=[...el.value].length;const e=document.getElementById(id);e.textContent=`${len} / 280`;e.className='char-count'+(len>280?' over':'');}
+let toastTimer;
+function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.className='toast';},2500);}
+function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='xpm_backup_'+toDateStr(new Date())+'.json';a.click();}
+function importData(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.posts&&d.settings){state=d;save();renderPosts();toast('インポート完了','success');}else toast('形式が不正です');}catch{toast('読み込みエラー');}input.value='';};r.readAsText(file);}
+function clearPosts(){if(!confirm('投稿データをすべて削除しますか？'))return;state.posts=[];save();renderPosts();refreshRewriteSelect();toast('削除しました');}
+
+// INIT
+load();
+const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+if(!state.settings.name){
+  state.settings={name:'haisonikko（配送日報アプリ）',target:'軽貨物ドライバー・個人事業主',features:'インストール不要・HTMLファイル1つで動く\n日報入力から請求書PDF出力まで完結\n複数取引先対応・日額固定/時間単価を個別設定\n完全買い切り¥3,980・サブスクなし',url:'haisonikko.booth.pm/items/8186303',hashtags:'#軽貨物 #軽貨物ドライバー #個人事業主',extra:'自分が実際に使っているツール。note無料版あり。'};
+  save();
+}
+renderCalendar();renderPosts();
+</script>
+</body>
+</html>
