@@ -51,6 +51,35 @@
   .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
   .stat-label { font-size: 10px; color: var(--text2); margin-top: 2px; }
 
+  /* TAG STYLES */
+  .tag-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700; padding: 3px 8px;
+    border-radius: 20px; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap; flex-shrink: 0;
+    border: 1px solid transparent;
+  }
+  .tag-badge:hover { filter: brightness(1.25); transform: scale(1.05); }
+  .tag-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; margin-bottom: 2px; }
+
+  .tag-search-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+  }
+  .tag-search-bar input {
+    flex: 1; background: transparent; border: none; color: var(--text);
+    font-size: 13px; font-family: 'Noto Sans JP', sans-serif; outline: none;
+  }
+  .tag-search-bar input::placeholder { color: var(--text2); }
+  .tag-search-clear {
+    background: none; border: none; color: var(--text2); font-size: 18px;
+    cursor: pointer; line-height: 1; padding: 0 2px;
+  }
+  .tag-search-clear:hover { color: var(--text); }
+  .tag-filter-active { border-color: rgba(232,146,10,0.5); background: rgba(232,146,10,0.04); }
+  .tag-filter-hint { font-size: 11px; color: var(--accent); margin-bottom: 10px; }
+
   /* POST CARD */
   .post-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; transition: border-color 0.15s; }
   .post-card.posted { border-color: rgba(74,222,128,0.3); }
@@ -172,6 +201,16 @@
       <div class="stat"><div class="stat-num" id="stat-scheduled" style="color:var(--blue)">0</div><div class="stat-label">日程あり</div></div>
       <div class="stat"><div class="stat-num" id="stat-posted" style="color:var(--green)">0</div><div class="stat-label">投稿済み</div></div>
     </div>
+
+    <!-- TAG SEARCH BAR -->
+    <div class="tag-search-bar" id="tag-search-bar">
+      <span style="font-size:15px;flex-shrink:0">🏷️</span>
+      <input type="text" id="tag-filter-input" placeholder="タグで絞り込み（スペース区切りでAND検索）"
+        oninput="onTagFilterInput()" onkeydown="if(event.key==='Enter')onTagFilterInput()">
+      <button class="tag-search-clear" id="tag-clear-btn" onclick="clearTagFilter()" style="display:none">×</button>
+    </div>
+    <div id="tag-filter-hint" style="display:none" class="tag-filter-hint"></div>
+
     <div id="posts-list"></div>
     <div class="card">
       <div class="section-title">手動追加</div>
@@ -180,6 +219,10 @@
         <label>投稿文</label>
         <textarea id="manual-text" rows="4" placeholder="投稿文を入力..." oninput="updateCharCount(this,'manual-count')"></textarea>
         <div class="char-count" id="manual-count">0 / 280</div>
+      </div>
+      <div class="field">
+        <label>タグ（スペースまたはカンマ区切り）</label>
+        <input type="text" id="manual-tags" placeholder="例：配送 料金　または　TASKWEAR,デザイン">
       </div>
       <div class="field"><label>投稿予定日（任意）</label><input type="date" id="manual-date"></div>
       <button class="btn btn-primary" onclick="addManualPost()">＋ 追加</button>
@@ -216,6 +259,10 @@
         <div class="generated-text" id="generated-text"></div>
         <div class="char-count" id="generated-count"></div>
         <hr class="divider">
+        <div class="field">
+          <label>タグ（スペースまたはカンマ区切り）</label>
+          <input type="text" id="gen-save-tags" placeholder="例：AI生成 配送">
+        </div>
         <div class="field"><label>投稿予定日を設定（任意）</label><input type="date" id="gen-save-date"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="saveGenerated()">＋ リストに保存</button>
@@ -291,6 +338,7 @@
 <script>
 let state = { settings:{name:'',target:'',features:'',url:'',hashtags:'',extra:''}, posts:[] };
 let calYear, calMonth, selectedDate=null, lastGenType=null, lastGenParams=null;
+let activeTagFilter = []; // 現在のタグフィルター
 
 function load(){try{const d=localStorage.getItem('xpm_v2');if(d)state=JSON.parse(d);}catch(e){}}
 function save(){try{localStorage.setItem('xpm_v2',JSON.stringify(state));}catch(e){}}
@@ -306,7 +354,75 @@ function switchTab(tab){
   if(tab==='settings')loadSettingsForm();
 }
 
-// CALENDAR
+// ===== TAG UTILS =====
+
+// 文字列からタグの色を自動生成（ハッシュベース）
+function tagColors(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return {
+    bg: `hsla(${hue},65%,38%,0.22)`,
+    color: `hsl(${hue},85%,72%)`,
+    border: `hsla(${hue},65%,55%,0.35)`
+  };
+}
+
+// "配送 料金" または "配送,料金" → ['配送','料金']
+function parseTags(str) {
+  if (!str || !str.trim()) return [];
+  return str.split(/[\s,、，]+/).map(t=>t.trim()).filter(Boolean);
+}
+
+// タグバッジHTML生成（クリックでフィルター）
+function tagBadgesHTML(tags, clickable=true) {
+  if (!tags || tags.length === 0) return '';
+  const badges = tags.map(tag => {
+    const c = tagColors(tag);
+    const action = clickable
+      ? `onclick="filterByTag('${esc(tag)}')" title="このタグで絞り込む"`
+      : '';
+    return `<span class="tag-badge" ${action} style="background:${c.bg};color:${c.color};border-color:${c.border}">🏷 ${esc(tag)}</span>`;
+  }).join('');
+  return `<div class="tag-badges">${badges}</div>`;
+}
+
+// タグ絞り込みを適用
+function filterByTag(tag) {
+  const input = document.getElementById('tag-filter-input');
+  const current = parseTags(input.value);
+  if (!current.includes(tag)) {
+    input.value = [...current, tag].join(' ');
+  }
+  onTagFilterInput();
+  switchTab('posts');
+}
+
+function onTagFilterInput() {
+  const val = document.getElementById('tag-filter-input').value;
+  activeTagFilter = parseTags(val);
+  const clearBtn = document.getElementById('tag-clear-btn');
+  const hint = document.getElementById('tag-filter-hint');
+  const bar = document.getElementById('tag-search-bar');
+  if (activeTagFilter.length > 0) {
+    clearBtn.style.display = '';
+    bar.classList.add('tag-filter-active');
+    hint.style.display = '';
+    hint.textContent = `🏷️ フィルター中: ${activeTagFilter.join(' AND ')}`;
+  } else {
+    clearBtn.style.display = 'none';
+    bar.classList.remove('tag-filter-active');
+    hint.style.display = 'none';
+  }
+  renderPosts();
+}
+
+function clearTagFilter() {
+  document.getElementById('tag-filter-input').value = '';
+  onTagFilterInput();
+}
+
+// ===== CALENDAR =====
 function changeMonth(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 
 function toDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -369,8 +485,9 @@ function selectDay(ds,date){
         <span style="font-size:12px;color:var(--text2)">${esc(p.theme)}</span>
         <span class="post-badge ${p.posted?'badge-posted':'badge-pending'}">${p.posted?'✅ 投稿済':'⏳ 未投稿'}</span>
       </div>
-      <div style="font-size:12px;line-height:1.65;white-space:pre-wrap;margin-bottom:8px">${esc(p.text)}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="font-size:12px;line-height:1.65;white-space:pre-wrap;margin-bottom:6px">${esc(p.text)}</div>
+      ${tagBadgesHTML(p.tags||[], true)}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <button class="btn btn-ghost btn-sm" onclick="togglePosted('${p.id}');selectDay('${ds}',new Date('${ds}T12:00:00'))">${p.posted?'↩ 未投稿に戻す':'✅ 投稿済みに'}</button>
         <button class="btn btn-ghost btn-sm" onclick="copyPost('${p.id}')">📋 コピー</button>
         <button class="btn btn-ghost btn-sm" onclick="removeSchedule('${p.id}','${ds}')">📅 日程解除</button>
@@ -402,7 +519,7 @@ function assignPost(){
   if(p&&selectedDate){p.scheduledDate=selectedDate;save();renderCalendar();closeAssignModal();selectDay(selectedDate,new Date(selectedDate+'T12:00:00'));toast('登録しました','success');}
 }
 
-// POSTS
+// ===== POSTS =====
 function renderPosts(){
   const total=state.posts.length;
   const scheduled=state.posts.filter(p=>p.scheduledDate).length;
@@ -411,8 +528,20 @@ function renderPosts(){
   document.getElementById('stat-scheduled').textContent=scheduled;
   document.getElementById('stat-posted').textContent=posted;
   const list=document.getElementById('posts-list');
+
+  // タグフィルタリング
+  let filtered=[...state.posts];
+  if(activeTagFilter.length>0){
+    filtered=filtered.filter(p=>{
+      const ptags=p.tags||[];
+      return activeTagFilter.every(ft=>ptags.some(pt=>pt.toLowerCase()===ft.toLowerCase()));
+    });
+  }
+
   if(!total){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div>まだ投稿ネタがありません<br><small style="margin-top:6px;display:block">AI生成タブで作るか下から追加してください</small></div>';return;}
-  const sorted=[...state.posts].sort((a,b)=>{
+  if(filtered.length===0){list.innerHTML='<div class="empty"><div class="empty-icon">🔍</div>該当する投稿がありません<br><small style="margin-top:6px;display:block">別のタグで絞り込んでみてください</small></div>';return;}
+
+  const sorted=[...filtered].sort((a,b)=>{
     if(a.scheduledDate&&b.scheduledDate)return a.scheduledDate.localeCompare(b.scheduledDate);
     if(a.scheduledDate)return -1;if(b.scheduledDate)return 1;return 0;
   });
@@ -424,7 +553,8 @@ function renderPosts(){
         <div class="post-badge ${p.posted?'badge-posted':p.scheduledDate?'badge-scheduled':'badge-pending'}">${p.posted?'✅ 済':p.scheduledDate?'📅 予定':'⏳ 未定'}</div>
       </div>
       <div class="post-text">${esc(p.text)}</div>
-      <div class="post-actions">
+      ${tagBadgesHTML(p.tags||[], true)}
+      <div class="post-actions" style="margin-top:10px">
         <input type="date" class="date-input" value="${p.scheduledDate||''}" onchange="setDate('${p.id}',this.value)" title="投稿日を設定">
         <button class="btn btn-ghost btn-sm" onclick="togglePosted('${p.id}')">${p.posted?'↩ 戻す':'✅ 投稿済み'}</button>
         <button class="btn btn-ghost btn-sm" onclick="copyPost('${p.id}')">📋</button>
@@ -438,21 +568,35 @@ function setDate(id,val){const p=state.posts.find(p=>p.id===id);if(p){p.schedule
 function togglePosted(id){const p=state.posts.find(p=>p.id===id);if(p){p.posted=!p.posted;save();renderPosts();}}
 function deletePost(id){if(!confirm('削除しますか？'))return;state.posts=state.posts.filter(p=>p.id!==id);save();renderPosts();refreshRewriteSelect();}
 function copyPost(id){const p=state.posts.find(p=>p.id===id);if(p)navigator.clipboard.writeText(p.text).then(()=>toast('コピーしました','success'));}
+
 function addManualPost(){
   const theme=document.getElementById('manual-theme').value.trim();
   const text=document.getElementById('manual-text').value.trim();
   const date=document.getElementById('manual-date').value;
+  const tagsRaw=document.getElementById('manual-tags').value;
   if(!text){toast('投稿文を入力してください');return;}
-  addPost(theme||'手動追加',text,date||null);
-  document.getElementById('manual-theme').value='';document.getElementById('manual-text').value='';document.getElementById('manual-date').value='';
-  document.getElementById('manual-count').textContent='0 / 280';toast('追加しました','success');
+  addPost(theme||'手動追加',text,date||null,parseTags(tagsRaw));
+  document.getElementById('manual-theme').value='';
+  document.getElementById('manual-text').value='';
+  document.getElementById('manual-date').value='';
+  document.getElementById('manual-tags').value='';
+  document.getElementById('manual-count').textContent='0 / 280';
+  toast('追加しました','success');
 }
-function addPost(theme,text,scheduledDate){
-  state.posts.unshift({id:Date.now().toString(),theme,text,posted:false,scheduledDate:scheduledDate||null,createdAt:new Date().toLocaleDateString('ja-JP')});
+
+function addPost(theme,text,scheduledDate,tags){
+  state.posts.unshift({
+    id: Date.now().toString(),
+    theme, text,
+    posted: false,
+    scheduledDate: scheduledDate||null,
+    tags: tags||[],
+    createdAt: new Date().toLocaleDateString('ja-JP')
+  });
   save();renderPosts();refreshRewriteSelect();
 }
 
-// AI
+// ===== AI =====
 function buildSystemPrompt(){
   const s=state.settings;
   return `あなたはSNSマーケティングの専門家です。以下の商品・サービスのX（旧Twitter）投稿文を作成します。
@@ -539,9 +683,12 @@ async function regenerate(){
 function saveGenerated(){
   const text=document.getElementById('generated-text').textContent;if(!text)return;
   const date=document.getElementById('gen-save-date').value;
+  const tagsRaw=document.getElementById('gen-save-tags').value;
   const theme=lastGenType==='new'?(lastGenParams?.theme||'AI生成'):'リライト';
-  addPost(theme,text,date||null);
-  document.getElementById('generated-result').style.display='none';document.getElementById('gen-save-date').value='';
+  addPost(theme,text,date||null,parseTags(tagsRaw));
+  document.getElementById('generated-result').style.display='none';
+  document.getElementById('gen-save-date').value='';
+  document.getElementById('gen-save-tags').value='';
   toast('保存しました','success');
 }
 function copyGenerated(){navigator.clipboard.writeText(document.getElementById('generated-text').textContent).then(()=>toast('コピーしました','success'));}
@@ -552,7 +699,7 @@ function refreshRewriteSelect(){
   if(cur)sel.value=cur;
 }
 
-// SETTINGS
+// ===== SETTINGS =====
 function loadSettingsForm(){
   const s=state.settings;
   ['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=s[k]||'';});
@@ -564,7 +711,7 @@ function loadSettingsForm(){
 }
 function saveSettings(){['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)state.settings[k]=el.value.trim();});save();toast('設定を保存しました','success');}
 
-// UTILS
+// ===== UTILS =====
 function providerHints(){return {
   groq:{placeholder:'gsk_...',hint:'📋 取得先（無料・クレカ不要）: <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com/keys</a><br>⚡ 1日14,400回まで無料'},
   gemini:{placeholder:'AIzaSy...',hint:'📋 取得先（無料・クレカ不要）: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a><br>🔵 1日1,500回まで無料'},
@@ -594,13 +741,15 @@ function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'app
 function importData(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.posts&&d.settings){state=d;save();renderPosts();toast('インポート完了','success');}else toast('形式が不正です');}catch{toast('読み込みエラー');}input.value='';};r.readAsText(file);}
 function clearPosts(){if(!confirm('投稿データをすべて削除しますか？'))return;state.posts=[];save();renderPosts();refreshRewriteSelect();toast('削除しました');}
 
-// INIT
+// ===== INIT =====
 load();
 const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
 if(!state.settings.name){
   state.settings={name:'haisonikko（配送日報アプリ）',target:'軽貨物ドライバー・個人事業主',features:'インストール不要・HTMLファイル1つで動く\n日報入力から請求書PDF出力まで完結\n複数取引先対応・日額固定/時間単価を個別設定\n完全買い切り¥3,980・サブスクなし',url:'haisonikko.booth.pm/items/8186303',hashtags:'#軽貨物 #軽貨物ドライバー #個人事業主',extra:'自分が実際に使っているツール。note無料版あり。'};
   save();
 }
+// 既存データにtagsフィールドが無い場合は補完
+state.posts.forEach(p=>{ if(!p.tags) p.tags=[]; });
 renderCalendar();renderPosts();
 </script>
 </body>
