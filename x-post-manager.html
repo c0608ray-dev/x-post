@@ -56,11 +56,22 @@
     display: inline-flex; align-items: center; gap: 4px;
     font-size: 11px; font-weight: 700; padding: 3px 8px;
     border-radius: 20px; cursor: pointer; transition: all 0.15s;
-    white-space: nowrap; flex-shrink: 0;
-    border: 1px solid transparent;
+    white-space: nowrap; flex-shrink: 0; border: 1px solid transparent;
   }
   .tag-badge:hover { filter: brightness(1.25); transform: scale(1.05); }
   .tag-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; margin-bottom: 2px; }
+
+  /* TAG INLINE EDIT */
+  .tag-edit-row {
+    display: none; align-items: center; gap: 6px; margin-top: 8px;
+    background: var(--surface2); border: 1px solid rgba(232,146,10,0.35);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .tag-edit-row input {
+    flex: 1; background: transparent; border: none; color: var(--text);
+    font-size: 12px; font-family: 'Noto Sans JP', sans-serif; outline: none;
+  }
+  .tag-edit-row input::placeholder { color: var(--text2); }
 
   .tag-search-bar {
     display: flex; align-items: center; gap: 8px;
@@ -72,10 +83,7 @@
     font-size: 13px; font-family: 'Noto Sans JP', sans-serif; outline: none;
   }
   .tag-search-bar input::placeholder { color: var(--text2); }
-  .tag-search-clear {
-    background: none; border: none; color: var(--text2); font-size: 18px;
-    cursor: pointer; line-height: 1; padding: 0 2px;
-  }
+  .tag-search-clear { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; line-height: 1; padding: 0 2px; }
   .tag-search-clear:hover { color: var(--text); }
   .tag-filter-active { border-color: rgba(232,146,10,0.5); background: rgba(232,146,10,0.04); }
   .tag-filter-hint { font-size: 11px; color: var(--accent); margin-bottom: 10px; }
@@ -101,12 +109,10 @@
   .cal-nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 16px; }
   .cal-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
   .cal-month { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
-
   .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
   .cal-dow { text-align: center; font-size: 11px; color: var(--text2); padding: 6px 0; font-weight: 700; }
   .cal-dow:first-child { color: var(--red); }
   .cal-dow:last-child { color: var(--blue); }
-
   .cal-cell { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; min-height: 62px; padding: 5px 4px; cursor: pointer; transition: border-color 0.15s; overflow: hidden; min-width: 0; }
   .cal-cell:hover { border-color: var(--accent); }
   .cal-cell.today { border-color: rgba(232,146,10,0.6); }
@@ -116,7 +122,6 @@
   .cal-cell.sat .cal-day { color: var(--blue); }
   .cal-day { font-size: 11px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 3px; }
   .today-dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
-
   .cal-icons { display: flex; flex-wrap: wrap; gap: 2px; }
   .cal-icon { font-size: 14px; line-height: 1; }
   .cal-icon.posted { color: var(--green); }
@@ -140,6 +145,24 @@
   .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .empty { text-align: center; padding: 40px 20px; color: var(--text2); font-size: 14px; }
   .empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+  /* PRODUCT ITEM (settings) */
+  .product-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.15s;
+  }
+  .product-item.is-active { border-color: rgba(232,146,10,0.45); }
+  .product-item-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; cursor: pointer; gap: 8px;
+  }
+  .product-item-header:hover { background: rgba(255,255,255,0.03); }
+  .product-item-name { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .product-item-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .badge-active { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: rgba(232,146,10,0.18); color: var(--accent); white-space: nowrap; }
+  .product-edit-form { padding: 12px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
+  .chevron { font-size: 11px; color: var(--text2); transition: transform 0.15s; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
 
   /* MODAL */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
@@ -231,6 +254,17 @@
 
   <!-- GENERATE -->
   <div id="tab-generate" style="display:none">
+
+    <!-- 商品セレクター -->
+    <div class="card" style="padding:12px 14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:var(--text2);white-space:nowrap;flex-shrink:0">📦 対象商品</span>
+        <select id="gen-product-select" onchange="onGenProductChange()"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;outline:none;border-color:rgba(232,146,10,0.4)">
+        </select>
+      </div>
+    </div>
+
     <div class="ai-panel">
       <div class="ai-panel-title">🤖 ゼロから新規生成</div>
       <div class="field"><label>テーマ・角度</label><input type="text" id="gen-theme" placeholder="例：買い切りで月額不要なことを強調"></div>
@@ -298,16 +332,20 @@
       <div id="apikey-hint" style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.8"></div>
       <button class="btn btn-primary btn-sm" onclick="saveApiKey()">💾 保存</button>
     </div>
+
+    <!-- 複数商品・サービス管理 -->
     <div class="card">
-      <div class="section-title">商品・サービス情報</div>
-      <div class="field"><label>商品名 *</label><input type="text" id="s-name" placeholder="例：haisonikko"></div>
-      <div class="field"><label>ターゲット *</label><input type="text" id="s-target" placeholder="例：軽貨物ドライバー・個人事業主"></div>
-      <div class="field"><label>特徴・ウリ（改行区切り）*</label><textarea id="s-features" rows="5" placeholder="インストール不要&#10;買い切り¥3,980"></textarea></div>
-      <div class="field"><label>販売URL</label><input type="text" id="s-url" placeholder="例：haisonikko.booth.pm/items/8186303"></div>
-      <div class="field"><label>ハッシュタグ（スペース区切り）</label><input type="text" id="s-hashtags" placeholder="例：#軽貨物 #個人事業主"></div>
-      <div class="field"><label>AIへの補足</label><textarea id="s-extra" rows="3" placeholder="例：自分が実際に使っているツール。note無料版あり。"></textarea></div>
-      <button class="btn btn-primary" onclick="saveSettings()">💾 保存</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">商品・サービス情報</div>
+        <button class="btn btn-primary btn-sm" onclick="addProduct()">＋ 追加</button>
+      </div>
+      <div id="products-list">
+        <div style="text-align:center;padding:20px;color:var(--text2);font-size:13px">
+          読み込み中...
+        </div>
+      </div>
     </div>
+
     <div class="card" style="border-color:rgba(248,113,113,0.2)">
       <div class="section-title" style="color:var(--red)">データ管理</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -336,12 +374,58 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let state = { settings:{name:'',target:'',features:'',url:'',hashtags:'',extra:''}, posts:[] };
+// ===== STATE =====
+let state = {
+  settings: {}, // AI provider settings (legacy fields kept for compat)
+  products: [],  // [{id, name, target, features, url, hashtags, extra}]
+  activeProductId: null,
+  posts: []
+};
 let calYear, calMonth, selectedDate=null, lastGenType=null, lastGenParams=null;
-let activeTagFilter = []; // 現在のタグフィルター
+let activeTagFilter = [];
+let openTagEditId = null;
+let expandedProductId = null;
 
-function load(){try{const d=localStorage.getItem('xpm_v2');if(d)state=JSON.parse(d);}catch(e){}}
+function load(){
+  try{
+    const d=localStorage.getItem('xpm_v2');
+    if(d) state=JSON.parse(d);
+  }catch(e){}
+}
 function save(){try{localStorage.setItem('xpm_v2',JSON.stringify(state));}catch(e){}}
+
+// ===== MIGRATION: 旧単一設定 → 複数商品配列 =====
+function migrateProducts(){
+  if(!state.products) state.products=[];
+  if(!state.posts) state.posts=[];
+  // 旧データ(state.settings.name)があってproductsが空なら移行
+  if(state.products.length===0){
+    const s=state.settings||{};
+    const defaultProd={
+      id:'p_default',
+      name: s.name||'haisonikko（配送日報アプリ）',
+      target: s.target||'軽貨物ドライバー・個人事業主',
+      features: s.features||'インストール不要・HTMLファイル1つで動く\n日報入力から請求書PDF出力まで完結\n複数取引先対応・日額固定/時間単価を個別設定\n完全買い切り¥3,980・サブスクなし',
+      url: s.url||'haisonikko.booth.pm/items/8186303',
+      hashtags: s.hashtags||'#軽貨物 #軽貨物ドライバー #個人事業主',
+      extra: s.extra||'自分が実際に使っているツール。note無料版あり。'
+    };
+    state.products=[defaultProd];
+    state.activeProductId='p_default';
+    save();
+  }
+  if(!state.activeProductId && state.products.length>0){
+    state.activeProductId=state.products[0].id;
+    save();
+  }
+  // 既存投稿にtagsがなければ補完
+  state.posts.forEach(p=>{if(!p.tags)p.tags=[];});
+}
+
+function getActiveProduct(){
+  if(!state.products||state.products.length===0) return null;
+  return state.products.find(p=>p.id===state.activeProductId)||state.products[0];
+}
 
 function switchTab(tab){
   ['calendar','posts','generate','settings'].forEach(t=>{
@@ -350,81 +434,93 @@ function switchTab(tab){
   });
   if(tab==='calendar')renderCalendar();
   if(tab==='posts')renderPosts();
-  if(tab==='generate')refreshRewriteSelect();
+  if(tab==='generate'){refreshRewriteSelect();refreshGenProductSelect();}
   if(tab==='settings')loadSettingsForm();
 }
 
 // ===== TAG UTILS =====
-
-// 文字列からタグの色を自動生成（ハッシュベース）
-function tagColors(tag) {
-  let hash = 0;
-  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  const hue = Math.abs(hash) % 360;
-  return {
-    bg: `hsla(${hue},65%,38%,0.22)`,
-    color: `hsl(${hue},85%,72%)`,
-    border: `hsla(${hue},65%,55%,0.35)`
-  };
+function tagColors(tag){
+  let hash=0;
+  for(let i=0;i<tag.length;i++) hash=tag.charCodeAt(i)+((hash<<5)-hash);
+  const hue=Math.abs(hash)%360;
+  return{bg:`hsla(${hue},65%,38%,0.22)`,color:`hsl(${hue},85%,72%)`,border:`hsla(${hue},65%,55%,0.35)`};
 }
 
-// "配送 料金" または "配送,料金" → ['配送','料金']
-function parseTags(str) {
-  if (!str || !str.trim()) return [];
+function parseTags(str){
+  if(!str||!str.trim()) return[];
   return str.split(/[\s,、，]+/).map(t=>t.trim()).filter(Boolean);
 }
 
-// タグバッジHTML生成（クリックでフィルター）
-function tagBadgesHTML(tags, clickable=true) {
-  if (!tags || tags.length === 0) return '';
-  const badges = tags.map(tag => {
-    const c = tagColors(tag);
-    const action = clickable
-      ? `onclick="filterByTag('${esc(tag)}')" title="このタグで絞り込む"`
-      : '';
-    return `<span class="tag-badge" ${action} style="background:${c.bg};color:${c.color};border-color:${c.border}">🏷 ${esc(tag)}</span>`;
+function tagBadgesHTML(tags,clickable=true){
+  if(!tags||tags.length===0) return'';
+  const badges=tags.map(tag=>{
+    const c=tagColors(tag);
+    const action=clickable?`onclick="filterByTag('${esc(tag)}')" title="このタグで絞り込む"`:'';
+    return`<span class="tag-badge" ${action} style="background:${c.bg};color:${c.color};border-color:${c.border}">🏷 ${esc(tag)}</span>`;
   }).join('');
-  return `<div class="tag-badges">${badges}</div>`;
+  return`<div class="tag-badges">${badges}</div>`;
 }
 
-// タグ絞り込みを適用
-function filterByTag(tag) {
-  const input = document.getElementById('tag-filter-input');
-  const current = parseTags(input.value);
-  if (!current.includes(tag)) {
-    input.value = [...current, tag].join(' ');
-  }
+function filterByTag(tag){
+  const input=document.getElementById('tag-filter-input');
+  const current=parseTags(input.value);
+  if(!current.includes(tag)) input.value=[...current,tag].join(' ');
   onTagFilterInput();
   switchTab('posts');
 }
 
-function onTagFilterInput() {
-  const val = document.getElementById('tag-filter-input').value;
-  activeTagFilter = parseTags(val);
-  const clearBtn = document.getElementById('tag-clear-btn');
-  const hint = document.getElementById('tag-filter-hint');
-  const bar = document.getElementById('tag-search-bar');
-  if (activeTagFilter.length > 0) {
-    clearBtn.style.display = '';
-    bar.classList.add('tag-filter-active');
-    hint.style.display = '';
-    hint.textContent = `🏷️ フィルター中: ${activeTagFilter.join(' AND ')}`;
-  } else {
-    clearBtn.style.display = 'none';
-    bar.classList.remove('tag-filter-active');
-    hint.style.display = 'none';
+function onTagFilterInput(){
+  const val=document.getElementById('tag-filter-input').value;
+  activeTagFilter=parseTags(val);
+  const clearBtn=document.getElementById('tag-clear-btn');
+  const hint=document.getElementById('tag-filter-hint');
+  const bar=document.getElementById('tag-search-bar');
+  if(activeTagFilter.length>0){
+    clearBtn.style.display='';bar.classList.add('tag-filter-active');
+    hint.style.display='';hint.textContent=`🏷️ フィルター中: ${activeTagFilter.join(' AND ')}`;
+  }else{
+    clearBtn.style.display='none';bar.classList.remove('tag-filter-active');hint.style.display='none';
   }
   renderPosts();
 }
 
-function clearTagFilter() {
-  document.getElementById('tag-filter-input').value = '';
+function clearTagFilter(){
+  document.getElementById('tag-filter-input').value='';
   onTagFilterInput();
+}
+
+// ===== タグインライン編集 =====
+function toggleTagEdit(id){
+  // 他の開いている編集を閉じる
+  if(openTagEditId && openTagEditId!==id){
+    const prev=document.getElementById('tag-edit-'+openTagEditId);
+    if(prev) prev.style.display='none';
+  }
+  const el=document.getElementById('tag-edit-'+id);
+  if(!el) return;
+  const isOpen=el.style.display==='flex';
+  el.style.display=isOpen?'none':'flex';
+  openTagEditId=isOpen?null:id;
+  if(!isOpen){
+    const input=document.getElementById('tag-edit-input-'+id);
+    if(input){input.focus();input.select();}
+  }
+}
+
+function savePostTags(id){
+  const p=state.posts.find(p=>p.id===id);
+  const input=document.getElementById('tag-edit-input-'+id);
+  if(p&&input){
+    p.tags=parseTags(input.value);
+    save();
+    openTagEditId=null;
+    renderPosts();
+    toast('タグを保存しました','success');
+  }
 }
 
 // ===== CALENDAR =====
 function changeMonth(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
-
 function toDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
 function renderCalendar(){
@@ -440,28 +536,22 @@ function renderCalendar(){
   state.posts.forEach(p=>{if(p.scheduledDate){if(!postsByDate[p.scheduledDate])postsByDate[p.scheduledDate]=[];postsByDate[p.scheduledDate].push(p);}});
   const total=Math.ceil((startDay+daysInMonth)/7)*7;
   for(let i=0;i<total;i++){
-    const cell=document.createElement('div');
-    cell.className='cal-cell';
+    const cell=document.createElement('div');cell.className='cal-cell';
     let date,isOther=false;
     if(i<startDay){date=new Date(calYear,calMonth-1,daysInPrev-startDay+i+1);isOther=true;}
     else if(i>=startDay+daysInMonth){date=new Date(calYear,calMonth+1,i-startDay-daysInMonth+1);isOther=true;}
     else{date=new Date(calYear,calMonth,i-startDay+1);}
-    const dow=date.getDay();
-    const ds=toDateStr(date);
+    const dow=date.getDay();const ds=toDateStr(date);
     if(isOther)cell.classList.add('other-month');
-    if(dow===0)cell.classList.add('sun');
-    if(dow===6)cell.classList.add('sat');
-    if(ds===todayStr)cell.classList.add('today');
-    if(ds===selectedDate)cell.classList.add('selected');
-    const dayEl=document.createElement('div');
-    dayEl.className='cal-day';
+    if(dow===0)cell.classList.add('sun');if(dow===6)cell.classList.add('sat');
+    if(ds===todayStr)cell.classList.add('today');if(ds===selectedDate)cell.classList.add('selected');
+    const dayEl=document.createElement('div');dayEl.className='cal-day';
     dayEl.innerHTML=`<span>${date.getDate()}</span>${ds===todayStr?'<span class="today-dot"></span>':''}`;
     cell.appendChild(dayEl);
     const posts=postsByDate[ds]||[];
     if(posts.length>0){
       const iconRow=document.createElement('div');iconRow.className='cal-icons';
-      const shown=posts.slice(0,4);
-      shown.forEach(p=>{const ic=document.createElement('span');ic.className='cal-icon '+(p.posted?'posted':'pending');ic.textContent=p.posted?'☑':'☐';iconRow.appendChild(ic);});
+      posts.slice(0,4).forEach(p=>{const ic=document.createElement('span');ic.className='cal-icon '+(p.posted?'posted':'pending');ic.textContent=p.posted?'☑':'☐';iconRow.appendChild(ic);});
       cell.appendChild(iconRow);
       if(posts.length>4){const more=document.createElement('div');more.className='cal-more';more.textContent=`+${posts.length-4}`;cell.appendChild(more);}
     }
@@ -471,8 +561,7 @@ function renderCalendar(){
 }
 
 function selectDay(ds,date){
-  selectedDate=ds;
-  renderCalendar();
+  selectedDate=ds;renderCalendar();
   const detail=document.getElementById('day-detail');
   document.getElementById('day-detail-date').textContent=`📅 ${date.getFullYear()}年${date.getMonth()+1}月${date.getDate()}日`;
   detail.style.display='';
@@ -486,7 +575,7 @@ function selectDay(ds,date){
         <span class="post-badge ${p.posted?'badge-posted':'badge-pending'}">${p.posted?'✅ 投稿済':'⏳ 未投稿'}</span>
       </div>
       <div style="font-size:12px;line-height:1.65;white-space:pre-wrap;margin-bottom:6px">${esc(p.text)}</div>
-      ${tagBadgesHTML(p.tags||[], true)}
+      ${tagBadgesHTML(p.tags||[],true)}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <button class="btn btn-ghost btn-sm" onclick="togglePosted('${p.id}');selectDay('${ds}',new Date('${ds}T12:00:00'))">${p.posted?'↩ 未投稿に戻す':'✅ 投稿済みに'}</button>
         <button class="btn btn-ghost btn-sm" onclick="copyPost('${p.id}')">📋 コピー</button>
@@ -510,9 +599,7 @@ function openAssignModal(){
   document.getElementById('assign-modal-title').textContent=`📅 ${selectedDate} に追加`;
   document.getElementById('assign-modal').style.display='flex';
 }
-
 function closeAssignModal(){document.getElementById('assign-modal').style.display='none';}
-
 function assignPost(){
   const id=document.getElementById('assign-select').value;
   const p=state.posts.find(p=>p.id===id);
@@ -529,7 +616,6 @@ function renderPosts(){
   document.getElementById('stat-posted').textContent=posted;
   const list=document.getElementById('posts-list');
 
-  // タグフィルタリング
   let filtered=[...state.posts];
   if(activeTagFilter.length>0){
     filtered=filtered.filter(p=>{
@@ -545,6 +631,7 @@ function renderPosts(){
     if(a.scheduledDate&&b.scheduledDate)return a.scheduledDate.localeCompare(b.scheduledDate);
     if(a.scheduledDate)return -1;if(b.scheduledDate)return 1;return 0;
   });
+
   list.innerHTML=sorted.map((p,i)=>`
     <div class="post-card ${p.posted?'posted':p.scheduledDate?'scheduled':''}">
       <div class="post-card-header">
@@ -553,10 +640,21 @@ function renderPosts(){
         <div class="post-badge ${p.posted?'badge-posted':p.scheduledDate?'badge-scheduled':'badge-pending'}">${p.posted?'✅ 済':p.scheduledDate?'📅 予定':'⏳ 未定'}</div>
       </div>
       <div class="post-text">${esc(p.text)}</div>
-      ${tagBadgesHTML(p.tags||[], true)}
+      ${tagBadgesHTML(p.tags||[],true)}
+      <!-- タグインライン編集エリア -->
+      <div class="tag-edit-row" id="tag-edit-${p.id}">
+        <span style="font-size:13px;flex-shrink:0">🏷️</span>
+        <input type="text" id="tag-edit-input-${p.id}"
+          value="${esc((p.tags||[]).join(' '))}"
+          placeholder="タグを入力（スペース区切り）"
+          onkeydown="if(event.key==='Enter')savePostTags('${p.id}')">
+        <button class="btn btn-primary btn-sm" onclick="savePostTags('${p.id}')">保存</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleTagEdit('${p.id}')">✕</button>
+      </div>
       <div class="post-actions" style="margin-top:10px">
         <input type="date" class="date-input" value="${p.scheduledDate||''}" onchange="setDate('${p.id}',this.value)" title="投稿日を設定">
         <button class="btn btn-ghost btn-sm" onclick="togglePosted('${p.id}')">${p.posted?'↩ 戻す':'✅ 投稿済み'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleTagEdit('${p.id}')" title="タグを編集">🏷️ ✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="copyPost('${p.id}')">📋</button>
         <button class="btn btn-danger" onclick="deletePost('${p.id}')">🗑</button>
       </div>
@@ -586,69 +684,61 @@ function addManualPost(){
 
 function addPost(theme,text,scheduledDate,tags){
   state.posts.unshift({
-    id: Date.now().toString(),
-    theme, text,
-    posted: false,
-    scheduledDate: scheduledDate||null,
-    tags: tags||[],
-    createdAt: new Date().toLocaleDateString('ja-JP')
+    id:Date.now().toString(),theme,text,
+    posted:false,scheduledDate:scheduledDate||null,
+    tags:tags||[],createdAt:new Date().toLocaleDateString('ja-JP')
   });
   save();renderPosts();refreshRewriteSelect();
 }
 
 // ===== AI =====
 function buildSystemPrompt(){
-  const s=state.settings;
-  return `あなたはSNSマーケティングの専門家です。以下の商品・サービスのX（旧Twitter）投稿文を作成します。
-【商品名】${s.name||'（未設定）'}
-【ターゲット】${s.target||'（未設定）'}
-【特徴・ウリ】\n${s.features||'（未設定）'}
-【販売URL】${s.url||''}
-【ハッシュタグ】${s.hashtags||''}
-【補足】${s.extra||''}
+  const prod=getActiveProduct();
+  if(!prod) return'あなたはSNSマーケティングの専門家です。X（旧Twitter）投稿文を作成します。投稿文のルール：日本語・口語体・140〜200文字・投稿文のみを返す';
+  return`あなたはSNSマーケティングの専門家です。以下の商品・サービスのX（旧Twitter）投稿文を作成します。
+【商品名】${prod.name||'（未設定）'}
+【ターゲット】${prod.target||'（未設定）'}
+【特徴・ウリ】\n${prod.features||'（未設定）'}
+【販売URL】${prod.url||''}
+【ハッシュタグ】${prod.hashtags||''}
+【補足】${prod.extra||''}
 投稿文のルール：日本語・口語体・140〜200文字・宣伝くさくしない・URLとハッシュタグを末尾に・投稿文のみを返す`;
 }
-async function callClaude(msg){
+
+async function callAI(msg){
   const apiKey=localStorage.getItem('xpm_apikey')||'';
   const provider=localStorage.getItem('xpm_provider')||'groq';
-  if(!apiKey){throw new Error('APIキーが設定されていません。⚙️設定タブで入力してください。');}
+  if(!apiKey) throw new Error('APIキーが設定されていません。⚙️設定タブで入力してください。');
 
   if(provider==='groq'){
     const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
       body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:buildSystemPrompt()},{role:'user',content:msg}],max_tokens:1000,temperature:0.9})
     });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
+    const data=await res.json();if(data.error)throw new Error(data.error.message);
     return data.choices[0].message.content.trim();
   }
-
   if(provider==='gemini'){
     const prompt=buildSystemPrompt()+'\n\n'+msg;
     const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1000,temperature:0.9}})
     });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
+    const data=await res.json();if(data.error)throw new Error(data.error.message);
     return data.candidates[0].content.parts[0].text.trim();
   }
-
   if(provider==='anthropic'){
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:[{role:'user',content:msg}]})
     });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
+    const data=await res.json();if(data.error)throw new Error(data.error.message);
     return data.content[0].text.trim();
   }
-
   throw new Error('不明なプロバイダーです');
 }
+
 function showGenerating(){document.getElementById('generated-result').style.display='none';document.getElementById('generating-indicator').style.display='';}
 function showResult(text){
   document.getElementById('generating-indicator').style.display='none';document.getElementById('generated-result').style.display='';
@@ -656,30 +746,37 @@ function showResult(text){
   const len=[...text].length;const el=document.getElementById('generated-count');
   el.textContent=`${len} 文字`;el.className='char-count'+(len>280?' over':'');
 }
+
 async function generateNew(){
-  const theme=document.getElementById('gen-theme').value.trim();const tone=document.getElementById('gen-tone').value;
-  if(!theme){toast('テーマを入力してください');return;}if(!state.settings.name){toast('先に商品設定を入力してください');return;}
+  const theme=document.getElementById('gen-theme').value.trim();
+  const tone=document.getElementById('gen-tone').value;
+  if(!theme){toast('テーマを入力してください');return;}
+  if(!getActiveProduct()?.name){toast('先に商品・サービス情報を設定してください');return;}
   lastGenType='new';lastGenParams={theme,tone};
   document.getElementById('btn-gen-new').disabled=true;showGenerating();
-  try{showResult(await callClaude(`テーマ「${theme}」、トーン「${tone}」で投稿文を1つ生成してください。`));}
+  try{showResult(await callAI(`テーマ「${theme}」、トーン「${tone}」で投稿文を1つ生成してください。`));}
   catch(e){document.getElementById('generating-indicator').style.display='none';toast('エラー: '+e.message);}
   finally{document.getElementById('btn-gen-new').disabled=false;}
 }
+
 async function rewritePost(){
   const id=document.getElementById('rewrite-select').value;if(!id){toast('投稿を選択してください');return;}
-  if(!state.settings.name){toast('先に商品設定を入力してください');return;}
-  const p=state.posts.find(p=>p.id===id);const instruction=document.getElementById('rewrite-instruction').value.trim();
+  if(!getActiveProduct()?.name){toast('先に商品・サービス情報を設定してください');return;}
+  const p=state.posts.find(p=>p.id===id);
+  const instruction=document.getElementById('rewrite-instruction').value.trim();
   lastGenType='rewrite';lastGenParams={postId:id,instruction};
   document.getElementById('btn-rewrite').disabled=true;showGenerating();
-  try{showResult(await callClaude(`以下の投稿文を${instruction?`「${instruction}」の指示で`:''}リライトしてください。\n\n${p.text}`));}
+  try{showResult(await callAI(`以下の投稿文を${instruction?`「${instruction}」の指示で`:''}リライトしてください。\n\n${p.text}`));}
   catch(e){document.getElementById('generating-indicator').style.display='none';toast('エラー: '+e.message);}
   finally{document.getElementById('btn-rewrite').disabled=false;}
 }
+
 async function regenerate(){
   if(!lastGenType)return;
   if(lastGenType==='new'){document.getElementById('gen-theme').value=lastGenParams.theme;document.getElementById('gen-tone').value=lastGenParams.tone;await generateNew();}
   else{document.getElementById('rewrite-select').value=lastGenParams.postId;document.getElementById('rewrite-instruction').value=lastGenParams.instruction||'';await rewritePost();}
 }
+
 function saveGenerated(){
   const text=document.getElementById('generated-text').textContent;if(!text)return;
   const date=document.getElementById('gen-save-date').value;
@@ -691,7 +788,9 @@ function saveGenerated(){
   document.getElementById('gen-save-tags').value='';
   toast('保存しました','success');
 }
+
 function copyGenerated(){navigator.clipboard.writeText(document.getElementById('generated-text').textContent).then(()=>toast('コピーしました','success'));}
+
 function refreshRewriteSelect(){
   const sel=document.getElementById('rewrite-select');const cur=sel.value;
   sel.innerHTML='<option value="">-- 選択 --</option>';
@@ -699,20 +798,134 @@ function refreshRewriteSelect(){
   if(cur)sel.value=cur;
 }
 
+// ===== 商品セレクター（生成タブ） =====
+function refreshGenProductSelect(){
+  const sel=document.getElementById('gen-product-select');
+  if(!sel)return;
+  if(!state.products||state.products.length===0){
+    sel.innerHTML='<option value="">-- 商品未登録（設定タブで追加） --</option>';
+    return;
+  }
+  sel.innerHTML=state.products.map(p=>
+    `<option value="${p.id}" ${p.id===state.activeProductId?'selected':''}>${esc(p.name||'（名前未設定）')}</option>`
+  ).join('');
+}
+
+function onGenProductChange(){
+  const id=document.getElementById('gen-product-select').value;
+  state.activeProductId=id;
+  save();
+}
+
+// ===== 複数商品管理 =====
+function renderProducts(){
+  const container=document.getElementById('products-list');
+  if(!container)return;
+  if(!state.products||state.products.length===0){
+    container.innerHTML='<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px">商品・サービスがまだありません<br><small>「＋ 追加」ボタンで登録してください</small></div>';
+    refreshGenProductSelect();
+    return;
+  }
+  container.innerHTML=state.products.map(prod=>{
+    const isActive=prod.id===state.activeProductId;
+    const isExpanded=expandedProductId===prod.id;
+    const chevronClass=isExpanded?'open':'';
+    const activeBadge=isActive?'<span class="badge-active">使用中</span>':'';
+    const selectBtn=(!isActive&&state.products.length>1)?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();setActiveProduct('${prod.id}')">選択</button>`:'';
+    const editForm=isExpanded?`
+      <div class="product-edit-form">
+        <div class="field"><label>商品名 *</label><input type="text" id="p-name-${prod.id}" value="${esc(prod.name)}" placeholder="例：haisonikko"></div>
+        <div class="field"><label>ターゲット *</label><input type="text" id="p-target-${prod.id}" value="${esc(prod.target)}" placeholder="例：軽貨物ドライバー・個人事業主"></div>
+        <div class="field"><label>特徴・ウリ（改行区切り）*</label><textarea id="p-features-${prod.id}" rows="4" placeholder="インストール不要&#10;買い切り¥3,980">${esc(prod.features)}</textarea></div>
+        <div class="field"><label>販売URL</label><input type="text" id="p-url-${prod.id}" value="${esc(prod.url)}" placeholder="例：example.booth.pm/items/12345"></div>
+        <div class="field"><label>ハッシュタグ（スペース区切り）</label><input type="text" id="p-hashtags-${prod.id}" value="${esc(prod.hashtags)}" placeholder="例：#軽貨物 #個人事業主"></div>
+        <div class="field"><label>AIへの補足</label><textarea id="p-extra-${prod.id}" rows="2" placeholder="例：自分が実際に使っているツール">${esc(prod.extra)}</textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveProduct('${prod.id}')">💾 保存</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${prod.id}')" ${state.products.length<=1?'disabled title="最後の商品は削除できません"':''}>🗑 削除</button>
+        </div>
+      </div>
+    `:'';
+    return`
+      <div class="product-item ${isActive?'is-active':''}">
+        <div class="product-item-header" onclick="toggleProductExpand('${prod.id}')">
+          <div class="product-item-name">${esc(prod.name)||'（名前未設定）'}</div>
+          <div class="product-item-actions">
+            ${activeBadge}
+            ${selectBtn}
+            <span class="chevron ${chevronClass}">▼</span>
+          </div>
+        </div>
+        ${editForm}
+      </div>
+    `;
+  }).join('');
+  refreshGenProductSelect();
+}
+
+function toggleProductExpand(id){
+  expandedProductId=(expandedProductId===id)?null:id;
+  renderProducts();
+}
+
+function setActiveProduct(id){
+  state.activeProductId=id;
+  save();
+  renderProducts();
+  refreshGenProductSelect();
+  toast('商品を切り替えました','success');
+}
+
+function addProduct(){
+  const id='p'+Date.now();
+  state.products.push({id,name:'',target:'',features:'',url:'',hashtags:'',extra:''});
+  if(!state.activeProductId) state.activeProductId=id;
+  expandedProductId=id;
+  save();
+  renderProducts();
+  // スクロールして新規フォームを表示
+  setTimeout(()=>{
+    const el=document.querySelector('.product-item:last-child');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },100);
+}
+
+function saveProduct(id){
+  const prod=state.products.find(p=>p.id===id);
+  if(!prod)return;
+  const get=field=>{const el=document.getElementById(`p-${field}-${id}`);return el?el.value.trim():'';};
+  prod.name=get('name');prod.target=get('target');prod.features=get('features');
+  prod.url=get('url');prod.hashtags=get('hashtags');prod.extra=get('extra');
+  save();
+  renderProducts();
+  refreshGenProductSelect();
+  toast('保存しました','success');
+}
+
+function deleteProduct(id){
+  if(state.products.length<=1){toast('最後の商品は削除できません');return;}
+  if(!confirm('この商品・サービス情報を削除しますか？'))return;
+  state.products=state.products.filter(p=>p.id!==id);
+  if(state.activeProductId===id) state.activeProductId=state.products[0]?.id||null;
+  if(expandedProductId===id) expandedProductId=null;
+  save();
+  renderProducts();
+  refreshGenProductSelect();
+  toast('削除しました');
+}
+
 // ===== SETTINGS =====
 function loadSettingsForm(){
-  const s=state.settings;
-  ['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=s[k]||'';});
-  const p=localStorage.getItem('xpm_provider')||'groq';
+  const provider=localStorage.getItem('xpm_provider')||'groq';
   const sel=document.getElementById('s-ai-provider');
-  if(sel){sel.value=p;onProviderChange();}
+  if(sel){sel.value=provider;onProviderChange();}
   const ak=document.getElementById('s-apikey');
   if(ak)ak.value=localStorage.getItem('xpm_apikey')||'';
+  renderProducts();
 }
-function saveSettings(){['name','target','features','url','hashtags','extra'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)state.settings[k]=el.value.trim();});save();toast('設定を保存しました','success');}
 
 // ===== UTILS =====
-function providerHints(){return {
+function providerHints(){return{
   groq:{placeholder:'gsk_...',hint:'📋 取得先（無料・クレカ不要）: <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com/keys</a><br>⚡ 1日14,400回まで無料'},
   gemini:{placeholder:'AIzaSy...',hint:'📋 取得先（無料・クレカ不要）: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a><br>🔵 1日1,500回まで無料'},
   anthropic:{placeholder:'sk-ant-...',hint:'📋 取得先: <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a><br>🟠 従量課金（投稿1本約1〜2円）'}
@@ -728,28 +941,22 @@ function saveApiKey(){
   const v=document.getElementById('s-apikey').value.trim();
   const p=document.getElementById('s-ai-provider').value;
   if(!v){toast('APIキーを入力してください');return;}
-  localStorage.setItem('xpm_apikey',v);
-  localStorage.setItem('xpm_provider',p);
+  localStorage.setItem('xpm_apikey',v);localStorage.setItem('xpm_provider',p);
   toast('保存しました（'+p+'）','success');
 }
 function toggleApiKeyVisibility(){const el=document.getElementById('s-apikey');el.type=el.type==='password'?'text':'password';}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function updateCharCount(el,id){const len=[...el.value].length;const e=document.getElementById(id);e.textContent=`${len} / 280`;e.className='char-count'+(len>280?' over':'');}
 let toastTimer;
 function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.className='toast';},2500);}
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='xpm_backup_'+toDateStr(new Date())+'.json';a.click();}
-function importData(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.posts&&d.settings){state=d;save();renderPosts();toast('インポート完了','success');}else toast('形式が不正です');}catch{toast('読み込みエラー');}input.value='';};r.readAsText(file);}
+function importData(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.posts){state=d;migrateProducts();save();renderPosts();renderProducts();toast('インポート完了','success');}else toast('形式が不正です');}catch{toast('読み込みエラー');}input.value='';};r.readAsText(file);}
 function clearPosts(){if(!confirm('投稿データをすべて削除しますか？'))return;state.posts=[];save();renderPosts();refreshRewriteSelect();toast('削除しました');}
 
 // ===== INIT =====
 load();
+migrateProducts();
 const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
-if(!state.settings.name){
-  state.settings={name:'haisonikko（配送日報アプリ）',target:'軽貨物ドライバー・個人事業主',features:'インストール不要・HTMLファイル1つで動く\n日報入力から請求書PDF出力まで完結\n複数取引先対応・日額固定/時間単価を個別設定\n完全買い切り¥3,980・サブスクなし',url:'haisonikko.booth.pm/items/8186303',hashtags:'#軽貨物 #軽貨物ドライバー #個人事業主',extra:'自分が実際に使っているツール。note無料版あり。'};
-  save();
-}
-// 既存データにtagsフィールドが無い場合は補完
-state.posts.forEach(p=>{ if(!p.tags) p.tags=[]; });
 renderCalendar();renderPosts();
 </script>
 </body>
